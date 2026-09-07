@@ -68,6 +68,18 @@ window.APP_CONFIG = {
 > 로컬 모드에서 쌓인 기록은 Supabase 로 자동 이관되지 않습니다(종목 id 체계가 달라서).
 > DB 로 쓸 계획이면 먼저 연결한 뒤 기록을 시작하세요.
 
+### 3) GitHub Pages 로 공개 (링크만으로 열기)
+
+https://weriousdf.github.io/workout-log/
+
+저장소 Settings → Pages 에서 `main` 브랜치 루트로 설정돼 있습니다. `main` 에 푸시하면
+1~2분 뒤 자동으로 반영됩니다.
+
+이 공개 페이지는 **항상 로컬 저장(localStorage) 모드**입니다. `config.js` 는 커밋되지 않으니
+Pages 에는 Supabase 키가 올라가지 않습니다 — 그리고 올리면 안 됩니다: `schema.sql` 의 RLS 가
+anon 에 전체 권한을 주므로, 공개 페이지에 URL·anon 키가 실리면 누구나 이 기록을 읽고 쓸 수
+있습니다. 기기 간 동기화가 필요하면 Supabase 를 붙인 로컬 실행이나 Artifact 버전을 쓰세요.
+
 ## 테이블 구조
 
 ```

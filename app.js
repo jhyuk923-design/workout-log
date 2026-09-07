@@ -550,7 +550,7 @@
     $('#footNote').textContent = msg ||
       (S.store.mode === 'supabase'
         ? 'Supabase 에 저장 중 · 체크·무게 모두 DB에 기록되어 새로고침 후에도 유지됩니다.'
-        : 'Supabase 설정이 없어 이 브라우저(localStorage)에 저장합니다. config.js 에 URL/anon key 를 넣으면 DB로 전환됩니다.');
+        : 'Supabase 설정이 없어 이 브라우저(localStorage)에 저장합니다. config.example.js 를 config.js 로 복사해 URL/anon key 를 넣으면 DB로 전환됩니다.');
     if (msg) console.warn(msg);
   }
 
