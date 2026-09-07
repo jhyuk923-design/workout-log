@@ -1,0 +1,11 @@
+# Supabase URL / anon key 가 들어가는 파일 — 커밋하지 않습니다.
+# config.example.js 를 config.js 로 복사해서 본인 값을 채우세요.
+config.js
+
+# 로컬 설정
+.claude/settings.local.json
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

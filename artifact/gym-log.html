@@ -1,0 +1,1019 @@
+<title>전신 무분할 로그</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
+<style>
+/* ============================================================
+   전신 무분할 로그
+   색: 단일 색조 blue sequential 램프 + 상태색(완료/경고), 라이트·다크 각각 선택
+   서체: IBM Plex Sans KR(한글 UI) / IBM Plex Mono(정렬되는 숫자)
+   ============================================================ */
+:root {
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f2ef;
+  --border:rgba(11,11,11,.10); --hairline:#e1e0d9;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#898781;
+  --accent:#2a78d6; --accent-ink:#184f95; --accent-wash:#eaf2fd;
+  --good:#0ca30c; --good-ink:#006300; --warn:#b06a00; --warn-wash:#fdf3e0;
+  --marker:#eb6834;
+  /* 완료 종목 수 0~5 (sequential blue, 밝음 -> 어두움) */
+  --h0:#f2f2ef; --h1:#cde2fb; --h2:#9ec5f4; --h3:#6da7ec; --h4:#3987e5; --h5:#256abf;
+  --p1:#2a78d6; --p2:#eb6834; --p3:#1baf7a; --p4:#eda100; --p5:#e87ba4;
+  --r:12px;
+  --shadow:0 1px 2px rgba(11,11,11,.05), 0 1px 10px rgba(11,11,11,.03);
+  --ui:"IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif;
+  --data:"IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#242423;
+    --border:rgba(255,255,255,.10); --hairline:#2c2c2a;
+    --text:#ffffff; --text-2:#c3c2b7; --muted:#898781;
+    --accent:#3987e5; --accent-ink:#9ec5f4; --accent-wash:#16233a;
+    --good:#0ca30c; --good-ink:#0ca30c; --warn:#fab219; --warn-wash:#2e2410;
+    --marker:#d95926;
+    --h0:#242423; --h1:#184f95; --h2:#256abf; --h3:#3987e5; --h4:#6da7ec; --h5:#9ec5f4;
+    --p1:#3987e5; --p2:#d95926; --p3:#199e70; --p4:#c98500; --p5:#d55181;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#242423;
+  --border:rgba(255,255,255,.10); --hairline:#2c2c2a;
+  --text:#ffffff; --text-2:#c3c2b7; --muted:#898781;
+  --accent:#3987e5; --accent-ink:#9ec5f4; --accent-wash:#16233a;
+  --good:#0ca30c; --good-ink:#0ca30c; --warn:#fab219; --warn-wash:#2e2410;
+  --marker:#d95926;
+  --h0:#242423; --h1:#184f95; --h2:#256abf; --h3:#3987e5; --h4:#6da7ec; --h5:#9ec5f4;
+  --p1:#3987e5; --p2:#d95926; --p3:#199e70; --p4:#c98500; --p5:#d55181;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+
+* { box-sizing:border-box; }
+body { margin:0; background:var(--page); color:var(--text); font:15px/1.55 var(--ui); padding-bottom:48px; }
+h1, h2 { margin:0; }
+button { font:inherit; color:inherit; cursor:pointer; }
+input, textarea { font:inherit; color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+
+/* ---------- 헤더 ---------- */
+.topbar { position:sticky; top:0; z-index:20; background:var(--page); border-bottom:1px solid var(--hairline); }
+.topbar-in { max-width:880px; margin:0 auto; padding:14px 16px 10px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.brand { display:flex; align-items:center; gap:10px; min-width:0; }
+.brand-mark { width:30px; height:30px; border-radius:9px; flex:none; background:linear-gradient(150deg, var(--h3), var(--h5)); }
+.brand h1 { font-size:17px; font-weight:700; letter-spacing:-.2px; }
+.brand-sub { margin:1px 0 0; font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.store { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-2); flex:none; }
+.store .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex:none; }
+.store.synced .dot { background:var(--good); }
+.store.localonly .dot { background:var(--warn); }
+.tabs { max-width:880px; margin:0 auto; padding:0 16px 10px; display:flex; gap:6px; }
+.tab { flex:1; padding:9px 4px; border:1px solid var(--hairline); background:var(--surface); border-radius:10px;
+       font-size:13.5px; font-weight:600; color:var(--text-2); letter-spacing:.02em; }
+.tab[aria-selected="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* ---------- 레이아웃 ---------- */
+.wrap { max-width:880px; margin:0 auto; padding:14px 16px 0; }
+.view { display:flex; flex-direction:column; gap:12px; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px; box-shadow:var(--shadow); }
+.card-h { font-size:13.5px; font-weight:700; margin-bottom:11px; display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; }
+.card-h-sub { font-size:11.5px; font-weight:400; color:var(--muted); }
+
+/* ---------- 기간 이동 ---------- */
+.periodbar { display:flex; align-items:center; gap:8px; }
+.nav { width:34px; height:34px; flex:none; border-radius:10px; border:1px solid var(--hairline); background:var(--surface); font-size:19px; line-height:1; color:var(--text-2); }
+.nav:hover { background:var(--surface-2); }
+.period { flex:1; min-width:0; text-align:center; }
+.period strong { display:block; font-size:15.5px; font-weight:700; letter-spacing:-.2px; }
+.period-sub { font-size:11.5px; color:var(--muted); }
+.today { flex:none; padding:7px 11px; border-radius:10px; border:1px solid var(--hairline); background:var(--surface); font-size:12.5px; font-weight:600; color:var(--text-2); }
+.today:hover { background:var(--surface-2); }
+
+/* ---------- 일: 요약 ---------- */
+.summary { display:flex; align-items:center; gap:14px; }
+.ring-wrap { position:relative; width:58px; height:58px; flex:none; }
+.ring { width:58px; height:58px; transform:rotate(-90deg); }
+.ring circle { fill:none; stroke-width:4; }
+.ring-bg { stroke:var(--surface-2); }
+.ring-fg { stroke:var(--accent); stroke-linecap:round; transition:stroke-dashoffset .35s ease; }
+.ring-wrap.full .ring-fg { stroke:var(--good); }
+.ring-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:1px;
+            font-family:var(--data); font-size:17px; font-weight:700; letter-spacing:-.5px; }
+.ring-num small { font-size:10.5px; font-weight:500; color:var(--muted); align-self:flex-end; padding-bottom:5px; }
+.summary-body { flex:1; min-width:0; }
+.summary-line { font-size:13.5px; font-weight:600; }
+.metrics { display:flex; gap:14px; margin-top:5px; flex-wrap:wrap; }
+.metric { display:flex; gap:5px; align-items:baseline; font-size:12px; }
+.metric-k { color:var(--muted); }
+.metric-v { font-family:var(--data); font-weight:600; }
+.ghost-btn { flex:none; align-self:stretch; padding:0 12px; border-radius:10px; border:1px solid var(--hairline);
+             background:var(--surface-2); font-size:12.5px; font-weight:600; color:var(--text-2); }
+.ghost-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ---------- 일: 종목 ---------- */
+.ex-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.ex { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px;
+      box-shadow:var(--shadow); display:flex; gap:12px; align-items:flex-start; transition:border-color .15s ease; }
+.ex.done { border-color:var(--good); }
+.chk { appearance:none; -webkit-appearance:none; margin:0; flex:none; width:26px; height:26px; border-radius:8px;
+       border:2px solid var(--hairline); background:var(--surface); position:relative; cursor:pointer; }
+.chk:checked { background:var(--good); border-color:var(--good); }
+.chk:checked::after { content:""; position:absolute; left:7px; top:3px; width:8px; height:14px;
+                      border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(42deg); }
+.ex-body { flex:1; min-width:0; }
+.ex-top { display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; }
+.part { font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:5px; background:var(--surface-2);
+        color:var(--text-2); display:inline-flex; align-items:center; gap:4px; letter-spacing:.02em; }
+.part i { width:6px; height:6px; border-radius:50%; display:inline-block; }
+.ex-name { font-size:14.5px; font-weight:700; letter-spacing:-.2px; }
+.ex-target { font-size:11.5px; color:var(--muted); font-family:var(--data); }
+.ex-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:3px; }
+.ex-last { font-size:11.5px; color:var(--accent-ink); font-family:var(--data); }
+.nudge { font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:5px;
+         background:var(--warn-wash); color:var(--warn); border:1px solid var(--warn); }
+.ex-inputs { display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; }
+.ipt { display:flex; flex-direction:column; gap:3px; }
+.ipt-k { font-size:10.5px; color:var(--muted); font-weight:600; padding-left:2px; letter-spacing:.02em; }
+.ipt-row { display:flex; align-items:stretch; }
+.ipt input { width:62px; padding:6px 7px; text-align:center; font-family:var(--data); font-weight:600;
+             border:1px solid var(--hairline); background:var(--surface); border-radius:8px; }
+.ipt input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-wash); }
+.stepper { width:27px; border:1px solid var(--hairline); background:var(--surface-2); color:var(--text-2); font-size:15px; line-height:1; }
+.stepper.minus { border-radius:8px 0 0 8px; border-right:none; }
+.stepper.plus { border-radius:0 8px 8px 0; border-left:none; }
+.ipt-row .stepper.minus + input { border-radius:0; }
+
+/* ---------- 일: 메모 ---------- */
+.daymeta { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+.field { display:flex; flex-direction:column; gap:4px; }
+.field.grow { flex:1; min-width:200px; }
+.field-k { font-size:11px; font-weight:700; color:var(--text-2); }
+.field-k em { font-weight:400; font-style:normal; color:var(--muted); }
+.daymeta input, .daymeta textarea { padding:8px 9px; border:1px solid var(--hairline); background:var(--surface);
+                                    border-radius:9px; resize:vertical; width:100%; }
+.daymeta input { width:112px; font-family:var(--data); }
+.daymeta input:focus, .daymeta textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-wash); }
+
+/* ---------- 주 ---------- */
+.goalbar-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.goalbar-k { font-size:12.5px; font-weight:700; }
+.goalbar-v { font-size:12.5px; font-weight:600; font-family:var(--data); color:var(--text-2); }
+.goalbar { height:8px; border-radius:4px; background:var(--surface-2); overflow:hidden; }
+.goalbar-fill { height:100%; border-radius:4px; background:var(--accent); transition:width .3s ease; }
+.goalbar-fill.met { background:var(--good); }
+.weekgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:14px; }
+.wcell { border:1px solid var(--hairline); border-radius:10px; padding:8px 3px 9px; background:var(--surface);
+         display:flex; flex-direction:column; align-items:center; gap:6px; }
+.wcell:hover { border-color:var(--accent); }
+.wcell.is-today { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+.wcell.future { opacity:.5; }
+.wcell-dow { font-size:10.5px; font-weight:700; color:var(--muted); }
+.wcell-d { font-size:13px; font-weight:700; font-family:var(--data); }
+.wcell .dot-i { width:6px; height:6px; }
+
+/* ---------- 통계 ---------- */
+.statrow { display:grid; grid-template-columns:repeat(auto-fit,minmax(114px,1fr)); gap:10px; }
+.stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:11px 12px; box-shadow:var(--shadow); }
+.stat-k { font-size:11px; color:var(--muted); font-weight:600; }
+.stat-v { font-family:var(--data); font-size:21px; font-weight:700; letter-spacing:-.6px; margin-top:2px; }
+.stat-v small { font-size:12px; font-weight:600; color:var(--text-2); letter-spacing:0; font-family:var(--ui); }
+.stat-note { font-size:11px; color:var(--text-2); margin-top:1px; }
+.stat-note.good { color:var(--good-ink); font-weight:600; }
+
+/* ---------- 월 달력 ---------- */
+.cal-head, .cal { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.cal-head { margin-bottom:5px; }
+.cal-head div { text-align:center; font-size:11px; font-weight:700; color:var(--muted); }
+.cal-head div.sun { color:#d03b3b; }
+.dcell { aspect-ratio:1/1; border-radius:9px; border:1px solid var(--hairline); background:var(--surface);
+         position:relative; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+.dcell.pad { border:none; background:none; pointer-events:none; }
+.dcell:hover:not(.pad) { border-color:var(--accent); }
+.dcell.is-today { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+.dcell.future { opacity:.45; }
+.dcell.perfect { background:var(--accent-wash); border-color:var(--accent); }
+.dcell.perfect .dcell-d { color:var(--accent-ink); }
+.dcell.perfect .dot-i.on { background:var(--good); border-color:var(--good); }
+.dcell-d { font-size:12.5px; font-weight:700; font-family:var(--data); }
+.dcell.memo::after { content:""; position:absolute; top:4px; right:4px; width:4px; height:4px; border-radius:50%; background:var(--marker); }
+
+/* 완료 종목을 점으로 (색만으로 정보를 전달하지 않기 위해) */
+.dots { display:flex; gap:3px; justify-content:center; }
+.dots.empty { visibility:hidden; }
+.dot-i { width:5px; height:5px; border-radius:50%; background:var(--h0); border:1px solid var(--hairline); box-sizing:border-box; }
+.dot-i.on { background:var(--accent); border-color:var(--accent); }
+
+/* ---------- 년 히트맵 ---------- */
+.heatscroll { overflow-x:auto; padding-bottom:4px; }
+.heat { display:flex; gap:3px; align-items:flex-start; width:max-content; }
+.heat-col { display:flex; flex-direction:column; gap:3px; }
+.heat-side { margin-right:2px; }
+.heat-side .hm-label { text-align:right; padding-right:2px; }
+.hm-label { font-size:9.5px; color:var(--muted); font-weight:600; height:12px; line-height:12px; white-space:nowrap; font-family:var(--data); }
+.hc { width:12px; height:12px; border-radius:3px; background:var(--h0); border:1px solid transparent; padding:0; }
+.hc.blank { visibility:hidden; }
+.hc.is-today { border-color:var(--text); }
+.hc:hover { outline:2px solid var(--accent); outline-offset:1px; }
+.legend { display:flex; align-items:center; gap:6px; margin-top:11px; font-size:11px; color:var(--muted); flex-wrap:wrap; }
+.legend .sw { width:12px; height:12px; border-radius:3px; border:1px solid var(--border); }
+.legend .lg-gap { width:10px; }
+.legend .lg-dots { display:inline-flex; align-items:center; gap:3px; }
+.legend .lg-perfect { width:12px; height:12px; border-radius:3px; background:var(--accent-wash); border:1px solid var(--accent); }
+.legend .lg-memo { width:6px; height:6px; border-radius:50%; background:var(--marker); }
+
+/* ---------- 년 막대 ---------- */
+.bars { display:grid; grid-template-columns:repeat(12,1fr); gap:2px; align-items:end; height:132px; }
+.bar-col { display:flex; flex-direction:column; justify-content:flex-end; height:100%; gap:4px; }
+.bar-track { flex:1; display:flex; align-items:flex-end; padding:0 2px; }
+.bar { width:100%; background:var(--accent); border-radius:4px 4px 0 0; min-height:2px; transition:height .3s ease; }
+.bar.zero { background:var(--hairline); }
+.bar-val, .bar-x { text-align:center; font-family:var(--data); }
+.bar-val { font-size:10px; font-weight:700; color:var(--text-2); height:13px; }
+.bar-x { font-size:9.5px; color:var(--muted); }
+
+/* ---------- 표 ---------- */
+.tablewrap { overflow-x:auto; }
+.tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+.tbl th, .tbl td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--hairline); white-space:nowrap; }
+.tbl th { font-size:11px; color:var(--muted); font-weight:700; }
+.tbl td:not(:first-child), .tbl th:not(:first-child) { text-align:right; font-family:var(--data); }
+.tbl tbody tr:last-child td { border-bottom:none; }
+.tbl .dim { color:var(--muted); }
+
+/* ---------- 툴팁 / 푸터 ---------- */
+.tooltip { position:fixed; z-index:60; pointer-events:none; background:var(--text); color:var(--page);
+           padding:6px 9px; border-radius:8px; font-size:11.5px; line-height:1.4; max-width:230px;
+           box-shadow:0 4px 16px rgba(0,0,0,.22); }
+.tooltip b { font-weight:700; }
+.foot { max-width:880px; margin:18px auto 0; padding:0 16px; font-size:11px; color:var(--muted); }
+[hidden] { display:none !important; }
+
+@media (max-width:520px) {
+  .summary { flex-wrap:wrap; }
+  .ghost-btn { align-self:auto; width:100%; padding:9px; }
+  .bars { height:112px; }
+  .bar-val { display:none; }
+}
+@media (max-width:430px) {
+  .cal-head, .cal { gap:4px; }
+  .dcell .dots { gap:2px; }
+  .dcell .dot-i { width:4px; height:4px; }
+}
+</style>
+
+<div id="tooltip" class="tooltip" hidden></div>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>전신 무분할 로그</h1>
+        <p class="brand-sub">1개월 차 초보자 · 머신 5종목 · 주 3회 격일</p>
+      </div>
+    </div>
+    <div class="store" id="storeStatus"><span class="dot"></span><span class="store-text">불러오는 중</span></div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="기간 보기">
+    <button class="tab" role="tab" data-view="day">일</button>
+    <button class="tab" role="tab" data-view="week">주</button>
+    <button class="tab" role="tab" data-view="month">월</button>
+    <button class="tab" role="tab" data-view="year">년</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <!-- 일 -->
+  <section class="view" id="view-day" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 날">‹</button>
+      <div class="period"><strong id="dayTitle">—</strong><span class="period-sub" id="dayRelative"></span></div>
+      <button class="nav" data-step="1" aria-label="다음 날">›</button>
+      <button class="today" data-today>오늘</button>
+    </div>
+    <div class="card summary">
+      <div class="ring-wrap" id="dayRingWrap">
+        <svg class="ring" viewBox="0 0 44 44" aria-hidden="true">
+          <circle class="ring-bg" cx="22" cy="22" r="18"></circle>
+          <circle class="ring-fg" id="dayRing" cx="22" cy="22" r="18"></circle>
+        </svg>
+        <div class="ring-num"><span id="dayDone">0</span><small id="dayTotal">/5</small></div>
+      </div>
+      <div class="summary-body">
+        <div class="summary-line" id="daySummary">—</div>
+        <div class="metrics">
+          <div class="metric"><span class="metric-k">이번 주</span><span class="metric-v" id="dayWeek">0/3회</span></div>
+          <div class="metric"><span class="metric-k">총 볼륨</span><span class="metric-v" id="dayVolume">0 kg</span></div>
+        </div>
+      </div>
+      <button class="ghost-btn" id="checkAll">전부 완료</button>
+    </div>
+    <ul class="ex-list" id="exList"></ul>
+    <div class="card daymeta">
+      <label class="field">
+        <span class="field-k">체중 (kg)</span>
+        <input type="number" step="0.1" min="0" id="bodyWeight" inputmode="decimal" placeholder="72.5">
+      </label>
+      <label class="field grow">
+        <span class="field-k">메모 <em>컨디션 · 통증 · 다음 목표</em></span>
+        <textarea id="dayMemo" rows="2" placeholder="레그프레스 45kg 가벼움. 다음엔 50kg."></textarea>
+      </label>
+    </div>
+  </section>
+
+  <!-- 주 -->
+  <section class="view" id="view-week" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 주">‹</button>
+      <div class="period"><strong id="weekTitle">—</strong><span class="period-sub" id="weekRange"></span></div>
+      <button class="nav" data-step="1" aria-label="다음 주">›</button>
+      <button class="today" data-today>이번 주</button>
+    </div>
+    <div class="card">
+      <div class="goalbar-head"><span class="goalbar-k">주 목표 달성</span><span class="goalbar-v" id="weekGoalText">0 / 3회</span></div>
+      <div class="goalbar"><div class="goalbar-fill" id="weekGoalFill"></div></div>
+      <div class="weekgrid" id="weekGrid"></div>
+    </div>
+    <div class="card">
+      <h2 class="card-h">종목별 이번 주 기록</h2>
+      <div class="tablewrap"><table class="tbl" id="weekTable">
+        <thead><tr><th>운동</th><th>수행</th><th>최고 무게</th><th>볼륨</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- 월 -->
+  <section class="view" id="view-month" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 달">‹</button>
+      <div class="period"><strong id="monthTitle">—</strong><span class="period-sub" id="monthSub"></span></div>
+      <button class="nav" data-step="1" aria-label="다음 달">›</button>
+      <button class="today" data-today>이번 달</button>
+    </div>
+    <div class="statrow" id="monthStats"></div>
+    <div class="card">
+      <div class="cal-head" id="calHead"></div>
+      <div class="cal" id="cal"></div>
+      <div class="legend" id="calLegend"></div>
+    </div>
+  </section>
+
+  <!-- 년 -->
+  <section class="view" id="view-year" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 해">‹</button>
+      <div class="period"><strong id="yearTitle">—</strong><span class="period-sub" id="yearSub"></span></div>
+      <button class="nav" data-step="1" aria-label="다음 해">›</button>
+      <button class="today" data-today>올해</button>
+    </div>
+    <div class="statrow" id="yearStats"></div>
+    <div class="card">
+      <h2 class="card-h">운동한 날 <span class="card-h-sub">칸 색이 진할수록 그날 완료한 종목이 많습니다</span></h2>
+      <div class="heatscroll"><div class="heat" id="heat"></div></div>
+      <div class="legend" id="heatLegend"></div>
+    </div>
+    <div class="card">
+      <h2 class="card-h">월별 운동 일수 <span class="card-h-sub" id="yearBarSub"></span></h2>
+      <div class="bars" id="yearBars"></div>
+    </div>
+    <div class="card">
+      <h2 class="card-h">종목별 최고 기록 <span class="card-h-sub">점진적 과부하 확인용</span></h2>
+      <div class="tablewrap"><table class="tbl" id="prTable">
+        <thead><tr><th>운동</th><th>최고</th><th>달성일</th><th>수행</th></tr></thead><tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot"><span id="footNote"></span></footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var WEEKLY_GOAL = 3;
+
+  /* 1개월 차 초보자 전신 무분할 루틴 — 궤적이 고정된 머신 중심 5종목 */
+  var ROUTINE = [
+    { id:'leg_press',      title:'레그 프레스',        part:'하체', target:'12~15회 × 3세트', unit:'reps', sets:3, min:12, max:15 },
+    { id:'chest_press',    title:'체스트 프레스 머신', part:'가슴', target:'10~12회 × 3세트', unit:'reps', sets:3, min:10, max:12 },
+    { id:'lat_pulldown',   title:'랫 풀 다운',         part:'등',   target:'10~12회 × 3세트', unit:'reps', sets:3, min:10, max:12 },
+    { id:'shoulder_press', title:'머신 숄더 프레스',   part:'어깨', target:'10~12회 × 3세트', unit:'reps', sets:3, min:10, max:12 },
+    { id:'plank',          title:'플랭크',             part:'코어', target:'30~45초 × 3세트', unit:'sec',  sets:3, min:30, max:45 }
+  ];
+  var PART_COLOR = { '하체':'var(--p1)', '가슴':'var(--p2)', '등':'var(--p3)', '어깨':'var(--p4)', '코어':'var(--p5)' };
+  var DOW = ['월','화','수','목','금','토','일'];
+  var TOTAL = ROUTINE.length;
+
+  /* ============ 유틸 ============ */
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function todayISO() { return iso(new Date()); }
+  function parseISO(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(d, n) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; }
+  function startOfWeek(d) { return addDays(d, -((d.getDay() + 6) % 7)); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : null; }
+  function fmtKg(v) { return v == null ? '—' : (Math.round(v * 10) / 10) + ' kg'; }
+  function fmtVol(v) {
+    if (!v) return '0 kg';
+    if (v >= 10000) return (Math.round(v / 100) / 10) + 'k kg';
+    return Math.round(v).toLocaleString('ko-KR') + ' kg';
+  }
+  function dateLong(d) { return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 (' + DOW[(d.getDay() + 6) % 7] + ')'; }
+  function mkey(dISO) { return dISO.slice(0, 7); }
+
+  /* ============ 상태 ============
+     months[mk] = { month, days: { 'YYYY-MM-DD': { ex:{ id:{done,kg,reps,sets} }, memo, bw } }, saved }
+     한 달을 문서 하나로 묶어 저장합니다 (칸마다 문서를 만들면 문서 수 상한에 부딪힙니다). */
+  var S = { months:{}, view:'day', cursor:new Date(), mode:'loading', note:'' };
+
+  function month(mk, make) {
+    var m = S.months[mk];
+    if (!m && make) { m = S.months[mk] = { month:mk, days:{}, saved:false }; }
+    return m || null;
+  }
+  function dayRec(dISO) { var m = S.months[mkey(dISO)]; return (m && m.days[dISO]) || null; }
+  function logOf(dISO, id) { var d = dayRec(dISO); return (d && d.ex && d.ex[id]) || null; }
+
+  function doneCount(dISO) {
+    var d = dayRec(dISO); if (!d || !d.ex) return 0;
+    var n = 0;
+    for (var i = 0; i < TOTAL; i++) { var l = d.ex[ROUTINE[i].id]; if (l && l.done) n++; }
+    return n;
+  }
+  function level(dISO) { var c = doneCount(dISO); return c === 0 ? 0 : Math.min(5, Math.ceil(c / TOTAL * 5)); }
+  function logVolume(w, l) {
+    if (!l || !l.done || w.unit !== 'reps') return 0;
+    var kg = num(l.kg); if (!kg) return 0;
+    return kg * (num(l.reps) || w.min) * (num(l.sets) || w.sets);
+  }
+  function dayVolume(dISO) {
+    return ROUTINE.reduce(function (a, w) { return a + logVolume(w, logOf(dISO, w.id)); }, 0);
+  }
+  function rangeISO(fromISO, toISO) {
+    var out = [], d = parseISO(fromISO), end = parseISO(toISO);
+    while (d <= end) { out.push(iso(d)); d = addDays(d, 1); }
+    return out;
+  }
+  /* 특정 날짜 이전의 수행 기록을 최신순으로 */
+  function history(w, beforeISO, howMany) {
+    var out = [];
+    var keys = Object.keys(S.months).sort().reverse();
+    for (var i = 0; i < keys.length && out.length < howMany; i++) {
+      var days = S.months[keys[i]].days;
+      var dates = Object.keys(days).sort().reverse();
+      for (var j = 0; j < dates.length && out.length < howMany; j++) {
+        if (dates[j] >= beforeISO) continue;
+        var l = days[dates[j]].ex && days[dates[j]].ex[w.id];
+        if (l && l.done) out.push({ date:dates[j], log:l });
+      }
+    }
+    return out;
+  }
+  /* 같은 무게로 목표 상단 횟수를 두 번 채웠으면 증량 신호 */
+  function needsProgress(w, dISO) {
+    var h = history(w, dISO, 2);
+    if (h.length < 2) return false;
+    var a = h[0].log, b = h[1].log;
+    if (w.unit === 'sec') return num(a.reps) >= w.max && num(b.reps) >= w.max;
+    return num(a.kg) != null && num(a.kg) === num(b.kg) && num(a.reps) >= w.max && num(b.reps) >= w.max;
+  }
+
+  /* ============ 저장소 ============ */
+  var LOCAL_KEY = 'gymlog.artifact.v1';
+  var LocalStore = {
+    label:'이 브라우저에만 저장',
+    cls:'localonly',
+    load: function () {
+      var raw = {};
+      try { raw = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch (e) { raw = {}; }
+      var months = raw.months || {};
+      Object.keys(months).forEach(function (mk) { months[mk].saved = true; });
+      return Promise.resolve(months);
+    },
+    save: function (mk) {
+      var raw = {};
+      try { raw = JSON.parse(localStorage.getItem(LOCAL_KEY)) || {}; } catch (e) { raw = {}; }
+      raw.months = raw.months || {};
+      raw.months[mk] = { month:mk, days:S.months[mk].days };
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(raw)); } catch (e) {
+        return Promise.reject({ code:'quota', message:'브라우저 저장 공간이 찼습니다' });
+      }
+      return Promise.resolve();
+    },
+    watch: function () {}
+  };
+
+  function makeDbStore(db) {
+    return {
+      label:'계정에 저장 · 기기 간 동기화',
+      cls:'synced',
+      load: function () {
+        return db.collection('logs').get().then(function (snap) {
+          var months = {};
+          snap.docs.forEach(function (doc) {
+            var body = doc.data() || {};
+            months[doc.id] = { month:doc.id, days:body.days || {}, saved:true };
+          });
+          return months;
+        });
+      },
+      save: function (mk, dates) {
+        var m = S.months[mk], ref = db.doc('logs/' + mk);
+        if (!m.saved) {
+          return ref.set({ month:mk, days:m.days }).then(function () { m.saved = true; });
+        }
+        var patch = {};
+        dates.forEach(function (d) { patch[d] = m.days[d]; });
+        // 날짜 하나만 병합해 다른 기기가 같은 달에 쓴 기록을 덮어쓰지 않게 합니다
+        return ref.update({ days:patch }).catch(function (e) {
+          if (e && e.code === 'invalid_argument') return ref.set({ month:mk, days:m.days });
+          throw e;
+        });
+      },
+      watch: function (onRemote) {
+        db.collection('logs').onSnapshot(function (snap) {
+          var changed = false;
+          snap.docs.forEach(function (doc) {
+            if (pending[doc.id]) return;                     // 저장 대기 중인 달은 건드리지 않음
+            var body = doc.data() || {};
+            var cur = S.months[doc.id];
+            if (cur && JSON.stringify(cur.days) === JSON.stringify(body.days || {})) return;
+            S.months[doc.id] = { month:doc.id, days:body.days || {}, saved:true };
+            changed = true;
+          });
+          if (changed) render();
+        }, function (e) { setNote('동기화가 끊겼습니다 (' + e.code + '). 새로고침하면 다시 연결됩니다.'); });
+      }
+    };
+  }
+  var store = LocalStore;
+
+  /* ============ 쓰기 (달 단위로 모아 저장) ============ */
+  var pending = {}, timers = {};
+  function markDirty(dISO) {
+    var mk = mkey(dISO);
+    (pending[mk] = pending[mk] || {})[dISO] = true;
+    clearTimeout(timers[mk]);
+    timers[mk] = setTimeout(function () { flush(mk); }, 500);
+  }
+  function flush(mk) {
+    var dates = Object.keys(pending[mk] || {});
+    if (!dates.length) return;
+    delete pending[mk];
+    Promise.resolve(store.save(mk, dates)).then(function () { setNote(''); }, function (e) {
+      dates.forEach(function (d) { (pending[mk] = pending[mk] || {})[d] = true; });
+      setNote('저장하지 못했습니다: ' + ((e && e.message) || e) + ' — 잠시 후 다시 시도됩니다.');
+      clearTimeout(timers[mk]);
+      timers[mk] = setTimeout(function () { flush(mk); }, 4000);
+    });
+  }
+  function ensureDay(dISO) {
+    var m = month(mkey(dISO), true);
+    var d = m.days[dISO] || (m.days[dISO] = { ex:{} });
+    if (!d.ex) d.ex = {};
+    return d;
+  }
+  function setLog(dISO, id, patch) {
+    var d = ensureDay(dISO);
+    d.ex[id] = Object.assign({ done:false, kg:null, reps:null, sets:null }, d.ex[id], patch);
+    markDirty(dISO);
+  }
+  function setDayField(dISO, patch) { Object.assign(ensureDay(dISO), patch); markDirty(dISO); }
+
+  /* ============ 툴팁 ============ */
+  var TT = $('#tooltip');
+  function showTip(el, html) {
+    TT.innerHTML = html; TT.hidden = false;
+    var r = el.getBoundingClientRect(), t = TT.getBoundingClientRect();
+    var x = Math.max(8, Math.min(r.left + r.width / 2 - t.width / 2, innerWidth - t.width - 8));
+    var y = r.top - t.height - 8;
+    TT.style.left = x + 'px'; TT.style.top = (y < 8 ? r.bottom + 8 : y) + 'px';
+  }
+  function hideTip() { TT.hidden = true; }
+  function bindTips(root) {
+    root.querySelectorAll('[data-tip]').forEach(function (el) {
+      el.addEventListener('mouseenter', function () { showTip(el, el.getAttribute('data-tip')); });
+      el.addEventListener('focus', function () { showTip(el, el.getAttribute('data-tip')); });
+      el.addEventListener('mouseleave', hideTip);
+      el.addEventListener('blur', hideTip);
+    });
+  }
+  addEventListener('scroll', hideTip, true);
+
+  /* ============ 공통 조각 ============ */
+  function dotsHTML(dISO) {
+    var d = dayRec(dISO), any = doneCount(dISO) > 0;
+    return '<span class="dots' + (any ? '' : ' empty') + '">' + ROUTINE.map(function (w) {
+      var l = d && d.ex && d.ex[w.id];
+      return '<i class="dot-i' + (l && l.done ? ' on' : '') + '"></i>';
+    }).join('') + '</span>';
+  }
+  function dayTip(dISO) {
+    var d = parseISO(dISO), c = doneCount(dISO), vol = dayVolume(dISO), rec = dayRec(dISO);
+    var s = '<b>' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 (' + DOW[(d.getDay() + 6) % 7] + ')</b><br>';
+    s += c === 0 ? '기록 없음' : '완료 ' + c + '/' + TOTAL + '종목' + (vol ? ' · 볼륨 ' + fmtVol(vol) : '');
+    if (rec && rec.bw) s += '<br>체중 ' + rec.bw + ' kg';
+    if (rec && rec.memo) s += '<br>' + esc(rec.memo);
+    return s;
+  }
+  function stat(k, v, unit, note, good) {
+    return '<div class="stat"><div class="stat-k">' + esc(k) + '</div><div class="stat-v">' + esc(v) +
+      (unit ? '<small> ' + esc(unit) + '</small>' : '') + '</div>' +
+      (note ? '<div class="stat-note' + (good ? ' good' : '') + '">' + esc(note) + '</div>' : '') + '</div>';
+  }
+  function stepper(field, dv, label) {
+    return '<button class="stepper ' + (dv < 0 ? 'minus' : 'plus') + '" data-step-field="' + field +
+      '" data-dv="' + dv + '" aria-label="' + label + '">' + (dv < 0 ? '−' : '+') + '</button>';
+  }
+
+  /* ============ 일 ============ */
+  function renderDay() {
+    var dISO = iso(S.cursor), done = doneCount(dISO), tISO = todayISO();
+    $('#dayTitle').textContent = dateLong(S.cursor);
+    var diff = Math.round((parseISO(dISO) - parseISO(tISO)) / 86400000);
+    $('#dayRelative').textContent = diff === 0 ? '오늘' : diff === -1 ? '어제' : diff === 1 ? '내일'
+      : diff < 0 ? (-diff) + '일 전' : diff + '일 후';
+
+    var C = 2 * Math.PI * 18, ring = $('#dayRing');
+    ring.style.strokeDasharray = C;
+    ring.style.strokeDashoffset = C * (1 - done / TOTAL);
+    $('#dayRingWrap').classList.toggle('full', done === TOTAL);
+    $('#dayDone').textContent = done;
+    $('#dayTotal').textContent = '/' + TOTAL;
+    $('#daySummary').textContent = done === 0 ? '아직 체크한 종목이 없습니다.'
+      : done === TOTAL ? '오늘 루틴 전부 완료.' : '남은 종목 ' + (TOTAL - done) + '개.';
+
+    var ws = startOfWeek(S.cursor), wc = 0;
+    for (var i = 0; i < 7; i++) if (doneCount(iso(addDays(ws, i))) > 0) wc++;
+    $('#dayWeek').textContent = wc + '/' + WEEKLY_GOAL + '회';
+    $('#dayVolume').textContent = fmtVol(dayVolume(dISO));
+    $('#checkAll').textContent = done === TOTAL ? '전부 해제' : '전부 완료';
+
+    $('#exList').innerHTML = ROUTINE.map(function (w) {
+      var l = logOf(dISO, w.id) || {}, isSec = w.unit === 'sec';
+      var h = history(w, dISO, 1)[0], meta = '';
+      if (h) {
+        var hd = parseISO(h.date);
+        meta += '<span class="ex-last">지난 기록 ' + (hd.getMonth() + 1) + '/' + hd.getDate() + ' · ' +
+          (isSec ? (h.log.reps || '—') + '초' : fmtKg(h.log.kg) + ' × ' + (h.log.reps || '—') + '회') +
+          ' × ' + (h.log.sets || w.sets) + '세트</span>';
+      }
+      if (needsProgress(w, dISO)) {
+        meta += '<span class="nudge">' + (isSec ? '시간 늘릴 때' : '무게 올릴 때') + '</span>';
+      }
+
+      var fields = '';
+      if (!isSec) {
+        fields += '<div class="ipt"><span class="ipt-k">무게 (kg)</span><div class="ipt-row">' +
+          stepper('kg', -2.5, '무게 2.5kg 감소') +
+          '<input type="number" step="0.5" min="0" inputmode="decimal" data-field="kg" value="' +
+          (l.kg != null ? l.kg : '') + '" placeholder="0" aria-label="' + esc(w.title) + ' 무게 kg">' +
+          stepper('kg', 2.5, '무게 2.5kg 증가') + '</div></div>';
+      }
+      fields += '<div class="ipt"><span class="ipt-k">' + (isSec ? '시간 (초)' : '횟수') + '</span><div class="ipt-row">' +
+        stepper('reps', isSec ? -5 : -1, '감소') +
+        '<input type="number" step="1" min="0" inputmode="numeric" data-field="reps" value="' +
+        (l.reps != null ? l.reps : '') + '" placeholder="' + w.min + '" aria-label="' + esc(w.title) + (isSec ? ' 시간 초' : ' 횟수') + '">' +
+        stepper('reps', isSec ? 5 : 1, '증가') + '</div></div>';
+      fields += '<div class="ipt"><span class="ipt-k">세트</span><div class="ipt-row">' +
+        stepper('sets', -1, '세트 감소') +
+        '<input type="number" step="1" min="0" inputmode="numeric" data-field="sets" value="' +
+        (l.sets != null ? l.sets : '') + '" placeholder="' + w.sets + '" aria-label="' + esc(w.title) + ' 세트">' +
+        stepper('sets', 1, '세트 증가') + '</div></div>';
+
+      return '<li class="ex' + (l.done ? ' done' : '') + '" data-id="' + w.id + '">' +
+        '<input class="chk" type="checkbox" data-toggle' + (l.done ? ' checked' : '') +
+        ' aria-label="' + esc(w.title) + ' 완료">' +
+        '<div class="ex-body"><div class="ex-top">' +
+          '<span class="part"><i style="background:' + PART_COLOR[w.part] + '"></i>' + esc(w.part) + '</span>' +
+          '<span class="ex-name">' + esc(w.title) + '</span>' +
+          '<span class="ex-target">' + esc(w.target) + '</span></div>' +
+          (meta ? '<div class="ex-meta">' + meta + '</div>' : '') +
+          '<div class="ex-inputs">' + fields + '</div></div></li>';
+    }).join('');
+
+    var rec = dayRec(dISO) || {};
+    $('#bodyWeight').value = rec.bw != null ? rec.bw : '';
+    $('#dayMemo').value = rec.memo || '';
+  }
+
+  /* ============ 주 ============ */
+  function renderWeek() {
+    var ws = startOfWeek(S.cursor), we = addDays(ws, 6), tISO = todayISO(), dates = [];
+    for (var i = 0; i < 7; i++) dates.push(iso(addDays(ws, i)));
+    $('#weekTitle').textContent = (ws.getMonth() + 1) + '월 ' + Math.ceil((ws.getDate() + 6) / 7) + '주차';
+    $('#weekRange').textContent = ws.getFullYear() + '. ' + (ws.getMonth() + 1) + '. ' + ws.getDate() +
+      ' ~ ' + (we.getMonth() + 1) + '. ' + we.getDate();
+
+    var trained = dates.filter(function (d) { return doneCount(d) > 0; }).length;
+    $('#weekGoalText').textContent = trained + ' / ' + WEEKLY_GOAL + '회';
+    var fill = $('#weekGoalFill');
+    fill.style.width = Math.min(100, Math.round(trained / WEEKLY_GOAL * 100)) + '%';
+    fill.classList.toggle('met', trained >= WEEKLY_GOAL);
+
+    $('#weekGrid').innerHTML = dates.map(function (d, k) {
+      return '<button class="wcell' + (d === tISO ? ' is-today' : '') + (d > tISO ? ' future' : '') +
+        '" data-date="' + d + '" data-tip="' + esc(dayTip(d)) + '">' +
+        '<span class="wcell-dow">' + DOW[k] + '</span>' +
+        '<span class="wcell-d">' + parseISO(d).getDate() + '</span>' + dotsHTML(d) + '</button>';
+    }).join('');
+    bindTips($('#weekGrid'));
+
+    $('#weekTable').querySelector('tbody').innerHTML = ROUTINE.map(function (w) {
+      var cnt = 0, best = null, vol = 0, isSec = w.unit === 'sec';
+      dates.forEach(function (d) {
+        var l = logOf(d, w.id); if (!l || !l.done) return;
+        cnt++;
+        var v = num(isSec ? l.reps : l.kg);
+        if (v != null && (best == null || v > best)) best = v;
+        vol += logVolume(w, l);
+      });
+      return '<tr><td>' + esc(w.title) + '</td>' +
+        '<td class="' + (cnt ? '' : 'dim') + '">' + cnt + '회</td>' +
+        '<td class="' + (best != null ? '' : 'dim') + '">' + (best == null ? '—' : isSec ? best + ' 초' : fmtKg(best)) + '</td>' +
+        '<td class="' + (vol ? '' : 'dim') + '">' + (isSec ? '—' : fmtVol(vol)) + '</td></tr>';
+    }).join('');
+  }
+
+  /* ============ 월 ============ */
+  function renderMonth() {
+    var y = S.cursor.getFullYear(), m = S.cursor.getMonth(), tISO = todayISO();
+    var nDays = new Date(y, m + 1, 0).getDate(), dates = [], i;
+    for (i = 1; i <= nDays; i++) dates.push(iso(new Date(y, m, i)));
+    $('#monthTitle').textContent = y + '년 ' + (m + 1) + '월';
+
+    var trained = dates.filter(function (d) { return doneCount(d) > 0; }).length;
+    var perfect = dates.filter(function (d) { return doneCount(d) === TOTAL; }).length;
+    var goal = Math.round(nDays / 7 * WEEKLY_GOAL);
+    var vol = dates.reduce(function (a, d) { return a + dayVolume(d); }, 0);
+    var bws = dates.map(function (d) { var r = dayRec(d); return r && num(r.bw); }).filter(function (v) { return v != null; });
+    var avgBw = bws.length ? (Math.round(bws.reduce(function (a, b) { return a + b; }, 0) / bws.length * 10) / 10) + ' kg' : '—';
+
+    $('#monthSub').textContent = '목표 ' + goal + '일 · 주 ' + WEEKLY_GOAL + '회 기준';
+    $('#monthStats').innerHTML =
+      stat('운동한 날', trained, '일', '목표 ' + goal + '일 대비 ' + Math.round(trained / goal * 100) + '%', trained >= goal) +
+      stat('전 종목 완료', perfect, '일', perfect ? TOTAL + '/' + TOTAL + ' 달성' : '아직 없음', perfect > 0) +
+      stat('총 볼륨', fmtVol(vol), '', '무게 × 횟수 × 세트') +
+      stat('평균 체중', avgBw, '', bws.length ? bws.length + '일 기록 평균' : '기록 없음');
+
+    $('#calHead').innerHTML = DOW.map(function (d, k) {
+      return '<div class="' + (k === 6 ? 'sun' : '') + '">' + d + '</div>';
+    }).join('');
+
+    var lead = (new Date(y, m, 1).getDay() + 6) % 7, cells = '';
+    for (i = 0; i < lead; i++) cells += '<div class="dcell pad"></div>';
+    dates.forEach(function (d) {
+      var c = doneCount(d), rec = dayRec(d);
+      cells += '<button class="dcell' + (d === tISO ? ' is-today' : '') + (d > tISO ? ' future' : '') +
+        (c === TOTAL ? ' perfect' : '') + (rec && rec.memo ? ' memo' : '') +
+        '" data-date="' + d + '" data-tip="' + esc(dayTip(d)) + '">' +
+        '<span class="dcell-d">' + parseISO(d).getDate() + '</span>' + dotsHTML(d) + '</button>';
+    });
+    $('#cal').innerHTML = cells;
+    bindTips($('#cal'));
+
+    $('#calLegend').innerHTML =
+      '<span class="lg-dots"><i class="dot-i on"></i><i class="dot-i on"></i><i class="dot-i"></i><i class="dot-i"></i><i class="dot-i"></i></span>' +
+      ' 점 ' + TOTAL + '개 = 종목 ' + TOTAL + '개, 채워진 점이 완료한 종목' +
+      '<span class="lg-gap"></span><span class="lg-perfect"></span> 전 종목 완료' +
+      '<span class="lg-gap"></span><span class="lg-memo"></span> 메모 있음' +
+      '<span class="lg-gap"></span>날짜를 누르면 그날 기록으로 이동합니다.';
+  }
+
+  /* ============ 년 ============ */
+  function renderYear() {
+    var y = S.cursor.getFullYear(), tISO = todayISO();
+    $('#yearTitle').textContent = y + '년';
+    var all = rangeISO(y + '-01-01', y + '-12-31');
+    var trained = all.filter(function (d) { return doneCount(d) > 0; }).length;
+    var perfect = all.filter(function (d) { return doneCount(d) === TOTAL; }).length;
+    var vol = all.reduce(function (a, d) { return a + dayVolume(d); }, 0);
+
+    /* 주 단위 목표 달성 / 최장 연속 */
+    var cur = startOfWeek(new Date(y, 0, 1)), yEnd = new Date(y, 11, 31);
+    var metWeeks = 0, streak = 0, best = 0, weeks = 0;
+    while (cur <= yEnd) {
+      var n = 0;
+      for (var i = 0; i < 7; i++) {
+        var d = iso(addDays(cur, i));
+        if (d.slice(0, 4) === String(y) && doneCount(d) > 0) n++;
+      }
+      weeks++;
+      if (n >= WEEKLY_GOAL) { metWeeks++; streak++; if (streak > best) best = streak; }
+      else if (iso(cur) <= tISO) { streak = 0; }
+      cur = addDays(cur, 7);
+    }
+
+    $('#yearSub').textContent = '주 ' + WEEKLY_GOAL + '회 기준 · ' + weeks + '주';
+    $('#yearStats').innerHTML =
+      stat('운동한 날', trained, '일', '연 ' + Math.round(trained / all.length * 100) + '% 수행') +
+      stat('전 종목 완료', perfect, '일', perfect ? TOTAL + '/' + TOTAL + ' 달성한 날' : '아직 없음', perfect > 0) +
+      stat('목표 달성 주', metWeeks, '주', '최장 연속 ' + best + '주', best >= 4) +
+      stat('연간 총 볼륨', fmtVol(vol), '', '무게 × 횟수 × 세트');
+
+    /* 히트맵: 열 = 주, 행 = 요일 */
+    var html = '<div class="heat-col heat-side"><div class="hm-label"></div>' +
+      DOW.map(function (d, k) { return '<div class="hm-label">' + (k % 2 === 0 ? d : '') + '</div>'; }).join('') + '</div>';
+    var colStart = startOfWeek(new Date(y, 0, 1)), labeled = -1;
+    while (colStart <= yEnd) {
+      var label = '';
+      for (var j = 0; j < 7; j++) {
+        var dd = addDays(colStart, j);
+        if (dd.getFullYear() === y && dd.getDate() <= 7 && dd.getMonth() !== labeled) {
+          label = (dd.getMonth() + 1) + '월'; labeled = dd.getMonth(); break;
+        }
+      }
+      var cells = '';
+      for (var k2 = 0; k2 < 7; k2++) {
+        var cd = addDays(colStart, k2), cISO = iso(cd);
+        if (cd.getFullYear() !== y) { cells += '<div class="hc blank"></div>'; continue; }
+        cells += '<button class="hc' + (cISO === tISO ? ' is-today' : '') + '" style="background:var(--h' + level(cISO) +
+          ')" data-date="' + cISO + '" data-tip="' + esc(dayTip(cISO)) + '"></button>';
+      }
+      html += '<div class="heat-col"><div class="hm-label">' + label + '</div>' + cells + '</div>';
+      colStart = addDays(colStart, 7);
+    }
+    $('#heat').innerHTML = html;
+    bindTips($('#heat'));
+    $('#heatLegend').innerHTML = '완료 종목 수&nbsp; <span class="sw" style="background:var(--h0)"></span>0' +
+      [1, 2, 3, 4, 5].map(function (n) { return '<span class="sw" style="background:var(--h' + n + ')"></span>' + n; }).join('') +
+      '<span class="lg-gap"></span>칸을 누르면 그날 기록으로 이동합니다.';
+
+    /* 월별 운동 일수 */
+    var monthly = [];
+    for (var mi = 0; mi < 12; mi++) {
+      var nd = new Date(y, mi + 1, 0).getDate(), n2 = 0;
+      for (var k3 = 1; k3 <= nd; k3++) if (doneCount(iso(new Date(y, mi, k3))) > 0) n2++;
+      monthly.push(n2);
+    }
+    var top = Math.max.apply(null, monthly), scale = Math.max(top, 1);
+    var topIdx = top > 0 ? monthly.indexOf(top) : -1;
+    $('#yearBarSub').textContent = top > 0 ? '최다 ' + (topIdx + 1) + '월 ' + top + '일' : '아직 기록 없음';
+    $('#yearBars').innerHTML = monthly.map(function (n, mi2) {
+      return '<div class="bar-col" data-tip="<b>' + (mi2 + 1) + '월</b><br>운동한 날 ' + n + '일">' +
+        '<div class="bar-val">' + (mi2 === topIdx ? n : '') + '</div>' +
+        '<div class="bar-track"><div class="bar' + (n ? '' : ' zero') + '" style="height:' +
+        (n ? Math.max(Math.round(n / scale * 100), 3) : 2) + '%"></div></div>' +
+        '<div class="bar-x">' + (mi2 + 1) + '</div></div>';
+    }).join('');
+    bindTips($('#yearBars'));
+
+    /* 종목별 최고 기록 */
+    $('#prTable').querySelector('tbody').innerHTML = ROUTINE.map(function (w) {
+      var isSec = w.unit === 'sec', bestLog = null, bestDate = null, bestVal = null;
+      all.forEach(function (d) {
+        var l = logOf(d, w.id); if (!l || !l.done) return;
+        var v = num(isSec ? l.reps : l.kg); if (v == null) return;
+        if (bestVal == null || v > bestVal) { bestVal = v; bestLog = l; bestDate = d; }
+      });
+      if (!bestLog) return '<tr><td>' + esc(w.title) + '</td><td class="dim">—</td><td class="dim">—</td><td class="dim">—</td></tr>';
+      var bd = parseISO(bestDate);
+      return '<tr><td>' + esc(w.title) + '</td>' +
+        '<td>' + (isSec ? bestVal + ' 초' : fmtKg(bestVal)) + '</td>' +
+        '<td>' + (bd.getMonth() + 1) + '/' + bd.getDate() + '</td>' +
+        '<td>' + (bestLog.reps != null ? bestLog.reps + (isSec ? '초' : '회') : '—') + ' × ' + (bestLog.sets || w.sets) + '세트</td></tr>';
+    }).join('');
+  }
+
+  /* ============ 뷰 전환 ============ */
+  var RENDER = { day:renderDay, week:renderWeek, month:renderMonth, year:renderYear };
+  function render() { hideTip(); RENDER[S.view](); }
+  function setView(v) {
+    S.view = v;
+    ['day', 'week', 'month', 'year'].forEach(function (k) {
+      $('#view-' + k).hidden = k !== v;
+      document.querySelector('.tab[data-view="' + k + '"]').setAttribute('aria-selected', String(k === v));
+    });
+    render();
+  }
+  function setNote(msg) {
+    S.note = msg;
+    $('#footNote').textContent = msg || (store === LocalStore
+      ? '이 브라우저에만 저장됩니다. 다른 기기에서는 기록이 보이지 않습니다.'
+      : '체크와 무게가 계정 저장소에 기록되어 새로고침·다른 기기에서도 그대로 남습니다.');
+  }
+
+  /* ============ 이벤트 ============ */
+  document.querySelectorAll('.tab').forEach(function (t) {
+    t.addEventListener('click', function () { setView(t.dataset.view); });
+  });
+  document.querySelectorAll('[data-today]').forEach(function (b) {
+    b.addEventListener('click', function () { S.cursor = new Date(); render(); });
+  });
+  ['day', 'week', 'month', 'year'].forEach(function (v) {
+    $('#view-' + v).querySelectorAll('.nav').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var dir = +b.dataset.step, d = S.cursor;
+        if (v === 'day') S.cursor = addDays(d, dir);
+        else if (v === 'week') S.cursor = addDays(d, dir * 7);
+        else if (v === 'month') S.cursor = new Date(d.getFullYear(), d.getMonth() + dir, Math.min(d.getDate(), 28));
+        else S.cursor = new Date(d.getFullYear() + dir, d.getMonth(), Math.min(d.getDate(), 28));
+        render();
+      });
+    });
+  });
+  ['#weekGrid', '#cal', '#heat'].forEach(function (sel) {
+    $(sel).addEventListener('click', function (e) {
+      var b = e.target.closest('[data-date]'); if (!b) return;
+      S.cursor = parseISO(b.dataset.date);
+      setView('day');
+      scrollTo({ top:0, behavior:'smooth' });
+    });
+  });
+
+  var exList = $('#exList'), deb = {};
+  function debounce(key, fn) { clearTimeout(deb[key]); deb[key] = setTimeout(fn, 350); }
+
+  exList.addEventListener('change', function (e) {
+    if (!e.target.hasAttribute('data-toggle')) return;
+    var li = e.target.closest('.ex'), id = li.dataset.id;
+    var w = ROUTINE.filter(function (x) { return x.id === id; })[0];
+    var dISO = iso(S.cursor), l = logOf(dISO, id) || {};
+    var patch = { done:e.target.checked };
+    if (e.target.checked) {                       // 체크하면 목표값을 미리 채워 둡니다
+      if (l.reps == null) patch.reps = w.min;
+      if (l.sets == null) patch.sets = w.sets;
+    }
+    setLog(dISO, id, patch);
+    renderDay();
+  });
+  exList.addEventListener('input', function (e) {
+    var inp = e.target;
+    if (inp.tagName !== 'INPUT' || !inp.dataset.field) return;
+    var id = inp.closest('.ex').dataset.id, dISO = iso(S.cursor), f = inp.dataset.field;
+    debounce(id + f, function () {
+      var patch = {}; patch[f] = num(inp.value);
+      setLog(dISO, id, patch);
+      $('#dayVolume').textContent = fmtVol(dayVolume(dISO));
+    });
+  });
+  exList.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-step-field]'); if (!b) return;
+    var li = b.closest('.ex'), id = li.dataset.id, f = b.dataset.stepField;
+    var w = ROUTINE.filter(function (x) { return x.id === id; })[0];
+    var inp = li.querySelector('input[data-field="' + f + '"]');
+    var base = num(inp.value);
+    if (base == null) base = f === 'sets' ? w.sets : f === 'reps' ? w.min : 0;
+    var v = Math.max(0, Math.round((base + parseFloat(b.dataset.dv)) * 10) / 10);
+    inp.value = v;
+    var dISO = iso(S.cursor), patch = {}; patch[f] = v;
+    setLog(dISO, id, patch);
+    $('#dayVolume').textContent = fmtVol(dayVolume(dISO));
+  });
+
+  $('#checkAll').addEventListener('click', function () {
+    var dISO = iso(S.cursor), on = doneCount(dISO) !== TOTAL;
+    ROUTINE.forEach(function (w) {
+      var l = logOf(dISO, w.id) || {}, patch = { done:on };
+      if (on) { if (l.reps == null) patch.reps = w.min; if (l.sets == null) patch.sets = w.sets; }
+      setLog(dISO, w.id, patch);
+    });
+    renderDay();
+  });
+  $('#bodyWeight').addEventListener('input', function (e) {
+    var dISO = iso(S.cursor), v = num(e.target.value);
+    debounce('bw', function () { setDayField(dISO, { bw:v }); });
+  });
+  $('#dayMemo').addEventListener('input', function (e) {
+    var dISO = iso(S.cursor), v = e.target.value;
+    debounce('memo', function () { setDayField(dISO, { memo:v }); });
+  });
+  addEventListener('beforeunload', function () {         // 대기 중인 저장을 즉시 밀어냅니다
+    Object.keys(pending).forEach(function (mk) { clearTimeout(timers[mk]); flush(mk); });
+  });
+
+  /* ============ 부팅 ============ */
+  setView('day');                                        // 저장소를 기다리지 않고 먼저 오늘 루틴을 보여 줍니다
+  setNote('');
+
+  function useStore(s) {
+    store = s;
+    var el = $('#storeStatus');
+    el.className = 'store ' + s.cls;
+    el.querySelector('.store-text').textContent = s.label;
+    return s.load().then(function (months) {
+      S.months = months;
+      render();
+      s.watch(render);
+      setNote('');
+    });
+  }
+
+  var ask = (window.claude && window.claude.use) ? window.claude.use('db') : Promise.resolve(null);
+  ask.then(function (db) {
+    if (!db) return useStore(LocalStore);
+    return useStore(makeDbStore(db)).catch(function (e) {
+      setNote('계정 저장소를 읽지 못했습니다 (' + ((e && e.code) || e) + '). 이 브라우저에 저장합니다.');
+      return useStore(LocalStore);
+    });
+  }, function () { return useStore(LocalStore); });
+})();
+</script>

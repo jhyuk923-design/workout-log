@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운동 기록 · 1개월 차 전신 무분할</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="tooltip" class="tooltip" hidden></div>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>운동 기록</h1>
+        <p class="brand-sub">1개월 차 초보자 · 전신 무분할 · 주 3회</p>
+      </div>
+    </div>
+    <div class="status" id="storeStatus" title="저장 위치">
+      <span class="dot"></span><span class="status-text">확인 중…</span>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="기간 보기">
+    <button class="tab" role="tab" data-view="day">일</button>
+    <button class="tab" role="tab" data-view="week">주</button>
+    <button class="tab" role="tab" data-view="month">월</button>
+    <button class="tab" role="tab" data-view="year">년</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <!-- ================= 일 ================= -->
+  <section class="view" id="view-day" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 날">‹</button>
+      <div class="period">
+        <strong id="dayTitle">—</strong>
+        <span id="dayRelative" class="period-sub"></span>
+      </div>
+      <button class="nav" data-step="1" aria-label="다음 날">›</button>
+      <button class="today" id="dayToday">오늘</button>
+    </div>
+
+    <div class="card summary">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 44 44" aria-hidden="true">
+          <circle class="ring-bg" cx="22" cy="22" r="18"></circle>
+          <circle class="ring-fg" id="dayRing" cx="22" cy="22" r="18"></circle>
+        </svg>
+        <div class="ring-num"><span id="dayDoneCount">0</span><small>/5</small></div>
+      </div>
+      <div class="summary-body">
+        <div class="summary-line" id="daySummaryLine">오늘 루틴을 시작해 보세요.</div>
+        <div class="metrics">
+          <div class="metric"><span class="metric-k">이번 주</span><span class="metric-v" id="dayWeekCount">0/3회</span></div>
+          <div class="metric"><span class="metric-k">총 볼륨</span><span class="metric-v" id="dayVolume">0 kg</span></div>
+        </div>
+      </div>
+      <button class="ghost-btn" id="dayCheckAll">전부 완료</button>
+    </div>
+
+    <ul class="ex-list" id="exList"></ul>
+
+    <div class="card daymeta">
+      <label class="field">
+        <span class="field-k">체중 (kg)</span>
+        <input type="number" step="0.1" min="0" id="bodyWeight" placeholder="예) 72.5" inputmode="decimal">
+      </label>
+      <label class="field grow">
+        <span class="field-k">메모 <em>컨디션 · 통증 · 다음 목표</em></span>
+        <textarea id="dayMemo" rows="2" placeholder="예) 레그프레스 45kg 가볍다. 다음엔 50kg."></textarea>
+      </label>
+    </div>
+  </section>
+
+  <!-- ================= 주 ================= -->
+  <section class="view" id="view-week" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 주">‹</button>
+      <div class="period"><strong id="weekTitle">—</strong><span id="weekRange" class="period-sub"></span></div>
+      <button class="nav" data-step="1" aria-label="다음 주">›</button>
+      <button class="today" id="weekToday">이번 주</button>
+    </div>
+
+    <div class="card">
+      <div class="goalbar-head">
+        <span class="goalbar-k">주 목표 달성</span>
+        <span class="goalbar-v" id="weekGoalText">0 / 3회</span>
+      </div>
+      <div class="goalbar"><div class="goalbar-fill" id="weekGoalFill"></div></div>
+      <div class="weekgrid" id="weekGrid"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-h">종목별 이번 주 기록</h2>
+      <div class="tablewrap">
+        <table class="tbl" id="weekTable">
+          <thead><tr><th>운동</th><th>수행</th><th>최고 무게</th><th>볼륨</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 월 ================= -->
+  <section class="view" id="view-month" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 달">‹</button>
+      <div class="period"><strong id="monthTitle">—</strong><span id="monthSub" class="period-sub"></span></div>
+      <button class="nav" data-step="1" aria-label="다음 달">›</button>
+      <button class="today" id="monthToday">이번 달</button>
+    </div>
+
+    <div class="statrow" id="monthStats"></div>
+
+    <div class="card">
+      <div class="cal-head" id="calHead"></div>
+      <div class="cal" id="cal"></div>
+      <div class="legend" id="calLegend"></div>
+    </div>
+  </section>
+
+  <!-- ================= 년 ================= -->
+  <section class="view" id="view-year" hidden>
+    <div class="periodbar">
+      <button class="nav" data-step="-1" aria-label="이전 해">‹</button>
+      <div class="period"><strong id="yearTitle">—</strong><span id="yearSub" class="period-sub"></span></div>
+      <button class="nav" data-step="1" aria-label="다음 해">›</button>
+      <button class="today" id="yearToday">올해</button>
+    </div>
+
+    <div class="statrow" id="yearStats"></div>
+
+    <div class="card">
+      <h2 class="card-h">운동한 날 <span class="card-h-sub">칸 색이 진할수록 그날 완료한 종목이 많습니다</span></h2>
+      <div class="heatscroll">
+        <div class="heat" id="heat"></div>
+      </div>
+      <div class="legend" id="heatLegend"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-h">월별 운동 일수 <span class="card-h-sub" id="yearBarSub"></span></h2>
+      <div class="bars" id="yearBars"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-h">종목별 최고 기록 <span class="card-h-sub">점진적 과부하 확인용</span></h2>
+      <div class="tablewrap">
+        <table class="tbl" id="prTable">
+          <thead><tr><th>운동</th><th>최고 무게</th><th>달성일</th><th>수행 횟수</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="footNote"></span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
